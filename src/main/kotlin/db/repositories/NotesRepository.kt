@@ -18,7 +18,6 @@ class NotesRepository {
                 it[title] = note.title
                 it[type] = note.type
                 it[parentId] = note.parentId
-
                 it[filePath] = note.filePath
                 it[createdAt] = note.createdAt
                 it[updatedAt] = note.updatedAt
@@ -26,13 +25,42 @@ class NotesRepository {
         }
     }
 
+    // НОВЫЙ МЕТОД: получить все заметки пользователя
+    fun getAllByUser(userId: String): List<Note> {
+        return transaction {
+            NotesTable.select { NotesTable.userId eq userId }
+                .map {
+                    Note(
+                        id = it[NotesTable.id],
+                        userId = it[NotesTable.userId],
+                        title = it[NotesTable.title],
+                        type = it[NotesTable.type],
+                        parentId = it[NotesTable.parentId],
+                        filePath = it[NotesTable.filePath],
+                        createdAt = it[NotesTable.createdAt],
+                        updatedAt = it[NotesTable.updatedAt]
+                    )
+                }
+        }
+    }
+
+    // ИЗМЕНЕННЫЙ МЕТОД: parentId может быть null (означает все заметки)
+    // или конкретным значением (только дочерние)
     fun getByUser(userId: String, parentId: String?): List<Note> {
         return transaction {
-
-            val condition = if (parentId == null) {
-                (NotesTable.userId eq userId) and NotesTable.parentId.isNull()
-            } else {
-                (NotesTable.userId eq userId) and (NotesTable.parentId eq parentId)
+            val condition = when {
+                // Если parentId == "all" или null - возвращаем ВСЕ заметки
+                parentId == null || parentId == "all" -> {
+                    NotesTable.userId eq userId
+                }
+                // Если parentId == "root" - только корневые (без родителей)
+                parentId == "root" -> {
+                    (NotesTable.userId eq userId) and NotesTable.parentId.isNull()
+                }
+                // Иначе - только дочерние конкретной заметки
+                else -> {
+                    (NotesTable.userId eq userId) and (NotesTable.parentId eq parentId)
+                }
             }
 
             NotesTable.select { condition }.map {
@@ -81,6 +109,15 @@ class NotesRepository {
     fun delete(id: String) {
         transaction {
             NotesTable.deleteWhere { NotesTable.id eq id }
+        }
+    }
+
+    fun updateParentId(id: String, parentId: String?) {
+        transaction {
+            NotesTable.update({ NotesTable.id eq id }) {
+                it[NotesTable.parentId] = parentId
+                it[updatedAt] = System.currentTimeMillis()
+            }
         }
     }
 }

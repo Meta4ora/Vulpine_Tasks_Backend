@@ -23,7 +23,6 @@ fun Route.notesRoutes() {
     authenticate {
         route("/notes") {
 
-
             post {
                 val principal = call.principal<JWTPrincipal>()
                     ?: return@post call.respond(HttpStatusCode.Unauthorized)
@@ -69,9 +68,21 @@ fun Route.notesRoutes() {
 
                 val parentId = call.request.queryParameters["parentId"]
 
-                call.respond(repository.getByUser(userId, parentId))
+                // Теперь:
+                // - Если parentId не указан или = "all" -> возвращаем ВСЕ заметки
+                // - Если parentId = "root" -> только корневые
+                // - Если parentId = конкретный ID -> только дочерние этой заметки
+                val notes = if (parentId == null) {
+                    // По умолчанию возвращаем ВСЕ заметки
+                    repository.getAllByUser(userId)
+                } else {
+                    repository.getByUser(userId, parentId)
+                }
+
+                call.respond(notes)
             }
 
+            // Остальные методы без изменений...
             get("/{id}") {
                 val principal = call.principal<JWTPrincipal>()
                     ?: return@get call.respond(HttpStatusCode.Unauthorized)
@@ -89,6 +100,7 @@ fun Route.notesRoutes() {
 
                 call.respond(note)
             }
+
             get("/{id}/content") {
                 val principal = call.principal<JWTPrincipal>()
                     ?: return@get call.respond(HttpStatusCode.Unauthorized)
@@ -126,7 +138,13 @@ fun Route.notesRoutes() {
 
                 val request = call.receive<UpdateNoteRequest>()
 
-                repository.updateTitle(id, request.title)
+                if (request.title != null) {
+                    repository.updateTitle(id, request.title)
+                }
+
+                if (request.parentId != null) {
+                    repository.updateParentId(id, request.parentId)
+                }
 
                 call.respondText("Updated")
             }

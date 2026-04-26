@@ -4,5 +4,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class UpdateNoteRequest(
-    val title: String
+    val title: String? = null,
+    val parentId: String? = null
 )
