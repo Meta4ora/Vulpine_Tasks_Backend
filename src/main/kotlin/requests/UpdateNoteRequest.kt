@@ -5,5 +5,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class UpdateNoteRequest(
     val title: String? = null,
-    val parentId: String? = null
+    val parentIds: List<String>? = null  // Изменено на массив
 )

@@ -8,7 +8,7 @@ data class Note(
     val userId: String,
     val title: String,
     val type: String,
-    val parentId: String?,
+    val parentIds: List<String> = emptyList(),
     val filePath: String,
     val createdAt: Long,
     val updatedAt: Long

@@ -39,4 +39,7 @@ dependencies {
     implementation("io.ktor:ktor-server-auth-jwt")
     implementation("io.ktor:ktor-server-swagger")
     implementation("io.ktor:ktor-server-openapi")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+    implementation("org.jetbrains.exposed:exposed-json:0.48.0")
 }

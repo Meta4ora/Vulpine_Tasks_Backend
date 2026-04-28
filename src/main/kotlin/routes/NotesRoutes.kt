@@ -20,6 +20,7 @@ fun Route.notesRoutes() {
 
     val repository = NotesRepository()
     val storage = FileStorageService()
+
     authenticate {
         route("/notes") {
 
@@ -33,7 +34,6 @@ fun Route.notesRoutes() {
                 val request = call.receive<CreateNoteRequest>()
 
                 val id = UUID.randomUUID().toString()
-
                 val path = "storage/user_$userId/note_$id.md"
 
                 val content = if (request.type == "task") {
@@ -49,14 +49,13 @@ fun Route.notesRoutes() {
                     userId = userId,
                     title = request.title,
                     type = request.type,
-                    parentId = request.parentId,
+                    parentIds = request.parentIds,
                     filePath = path,
                     createdAt = System.currentTimeMillis(),
                     updatedAt = System.currentTimeMillis()
                 )
 
                 repository.create(note)
-
                 call.respond(note)
             }
 
@@ -65,15 +64,9 @@ fun Route.notesRoutes() {
                     ?: return@get call.respond(HttpStatusCode.Unauthorized)
 
                 val userId = principal.payload.getClaim("userId").asString()
-
                 val parentId = call.request.queryParameters["parentId"]
 
-                // Теперь:
-                // - Если parentId не указан или = "all" -> возвращаем ВСЕ заметки
-                // - Если parentId = "root" -> только корневые
-                // - Если parentId = конкретный ID -> только дочерние этой заметки
                 val notes = if (parentId == null) {
-                    // По умолчанию возвращаем ВСЕ заметки
                     repository.getAllByUser(userId)
                 } else {
                     repository.getByUser(userId, parentId)
@@ -82,13 +75,11 @@ fun Route.notesRoutes() {
                 call.respond(notes)
             }
 
-            // Остальные методы без изменений...
             get("/{id}") {
                 val principal = call.principal<JWTPrincipal>()
                     ?: return@get call.respond(HttpStatusCode.Unauthorized)
 
                 val userId = principal.payload.getClaim("userId").asString()
-
                 val id = call.parameters["id"] ?: return@get call.respondText("Missing id")
 
                 val note = repository.getById(id)
@@ -106,7 +97,6 @@ fun Route.notesRoutes() {
                     ?: return@get call.respond(HttpStatusCode.Unauthorized)
 
                 val userId = principal.payload.getClaim("userId").asString()
-
                 val id = call.parameters["id"] ?: return@get call.respondText("Missing id")
 
                 val note = repository.getById(id)
@@ -117,7 +107,6 @@ fun Route.notesRoutes() {
                 }
 
                 val content = storage.readFile(note.filePath)
-
                 call.respondText(content)
             }
 
@@ -126,7 +115,6 @@ fun Route.notesRoutes() {
                     ?: return@put call.respond(HttpStatusCode.Unauthorized)
 
                 val userId = principal.payload.getClaim("userId").asString()
-
                 val id = call.parameters["id"] ?: return@put call.respondText("Missing id")
 
                 val note = repository.getById(id)
@@ -142,8 +130,8 @@ fun Route.notesRoutes() {
                     repository.updateTitle(id, request.title)
                 }
 
-                if (request.parentId != null) {
-                    repository.updateParentId(id, request.parentId)
+                if (request.parentIds != null) {
+                    repository.updateParentIds(id, request.parentIds)
                 }
 
                 call.respondText("Updated")
@@ -154,7 +142,6 @@ fun Route.notesRoutes() {
                     ?: return@put call.respond(HttpStatusCode.Unauthorized)
 
                 val userId = principal.payload.getClaim("userId").asString()
-
                 val id = call.parameters["id"] ?: return@put call.respondText("Missing id")
 
                 val note = repository.getById(id)
@@ -165,9 +152,7 @@ fun Route.notesRoutes() {
                 }
 
                 val content = call.receiveText()
-
                 storage.updateFile(note.filePath, content)
-
                 call.respondText("Content updated")
             }
 
@@ -176,7 +161,6 @@ fun Route.notesRoutes() {
                     ?: return@delete call.respond(HttpStatusCode.Unauthorized)
 
                 val userId = principal.payload.getClaim("userId").asString()
-
                 val id = call.parameters["id"] ?: return@delete call.respondText("Missing id")
 
                 val note = repository.getById(id)
@@ -188,7 +172,6 @@ fun Route.notesRoutes() {
 
                 File(note.filePath).delete()
                 repository.delete(id)
-
                 call.respondText("Deleted")
             }
         }

@@ -3,17 +3,12 @@ package com.example.db.tables
 import org.jetbrains.exposed.sql.Table
 
 object NotesTable : Table("notes") {
-
-    val id = text("id")
-    val userId = text("user_id")
-
-    val title = text("title")
-    val type = text("type")
-
-    val parentId = text("parent_id").nullable()
-
-    val filePath = text("file_path")
-
+    val id = varchar("id", 256)
+    val userId = varchar("user_id", 256)
+    val title = varchar("title", 256)
+    val type = varchar("type", 256)
+    val parentIds = varchar("parent_ids", 1024).nullable().default("[]")  // Храним "[]" или "[\"id1\",\"id2\"]"
+    val filePath = varchar("file_path", 512)
     val createdAt = long("created_at")
     val updatedAt = long("updated_at")
 
