@@ -11,18 +11,16 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.server.plugins.swagger.swaggerUI
 import io.ktor.server.routing.*
 import org.slf4j.event.Level
 
 fun main() {
-    embeddedServer(Netty, port = 8083) {
+    embeddedServer(Netty, port = 8080) {
         module()
     }.start(wait = true)
 }
 
 fun Application.module() {
-
     install(CallLogging) {
         level = Level.INFO
     }
@@ -32,14 +30,11 @@ fun Application.module() {
     }
 
     DatabaseFactory.init()
-
     configureAuth()
-
+    
     routing {
-        swaggerUI(path = "swagger", swaggerFile = "openapi/documentation.yaml")
         authRoutes()
         userRoutes()
         notesRoutes()
     }
-    configureRouting()
 }

@@ -19,10 +19,9 @@ kotlin {
 }
 
 dependencies {
-
+    implementation("io.ktor:ktor-server-cors:2.3.12")
     implementation("io.ktor:ktor-server-core")
     implementation("io.ktor:ktor-server-netty")
-
     implementation("io.ktor:ktor-server-content-negotiation")
     implementation("io.ktor:ktor-serialization-kotlinx-json")
 
@@ -43,3 +42,4 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
     implementation("org.jetbrains.exposed:exposed-json:0.48.0")
 }
+

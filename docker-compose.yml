@@ -1,34 +1,29 @@
-services:
-  vulpine-service-ktor:         # Название вашего сервиса
-    build: .              # Указывает Docker собрать образ из Dockerfile в текущей папке
-    container_name: vulpine-tasks-backend
-    ports:
-      - "8080:8080"      # Пробрасываем порт: (порт_хоста:порт_контейнера)
-    environment:
-      # Переменные для подключения к БД. Их можно зашифровать через "Secrets" в UI TrueNAS
-      - DB_JDBC_URL=jdbc:postgresql://db:5432/vulpine_db
-      - DB_USER=admin
-      - DB_PASSWORD=kaftan_password
-    depends_on:
-      db:
-        condition: service_healthy    # Ждем, пока БД не будет готова
-    restart: unless-stopped
+version: '3.8'
 
-  db:
-    image: postgres:16-alpine         # Используем легковесный образ PostgreSQL
-    container_name: vulpine-tasks-db
-    environment:
-      POSTGRES_DB: vulpine_db
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: kaftan_password
-    volumes:
-      # Сохраняем данные БД вне контейнера, на ваш ZFS-пул
-      - /mnt/your_pool/apps/postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"      # Доступ к БД из локальной сети
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d vulpine_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vulpine-db
     restart: unless-stopped
+    environment:
+      POSTGRES_DB: vulpine_tasks
+      POSTGRES_USER: vulpine_user
+      POSTGRES_PASSWORD: vulpine_password
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: .
+    container_name: vulpine-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/vulpine_tasks
+      DB_USER: vulpine_user
+      DB_PASSWORD: vulpine_password
+    command: java -jar app.jar -port=8080
+    depends_on:
+      - postgres
