@@ -38,8 +38,15 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Run tests
-        run: ./gradlew test --no-daemon
+      - name: Setup database tables
+        run: ./gradlew test --tests "SetupDatabaseTest" --no-daemon
+        env:
+          DB_URL: jdbc:postgresql://localhost:5432/vulpine_tasks_test
+          DB_USER: vulpine_user
+          DB_PASSWORD: vulpine_password
+
+      - name: Run API tests
+        run: ./gradlew test --tests "UserFlowTest" --no-daemon
         env:
           DB_URL: jdbc:postgresql://localhost:5432/vulpine_tasks_test
           DB_USER: vulpine_user
