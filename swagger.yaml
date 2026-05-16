@@ -1,0 +1,379 @@
+openapi: 3.0.0
+info:
+  title: Vulpine Tasks API
+  version: 1.0.0
+  description: |
+    API для управления заметками с поддержкой:
+    - Аутентификация (JWT)
+    - CRUD операции с заметками
+    - Иерархическая структура заметок
+    - Работа с содержимым заметок
+
+servers:
+  - url: http://37.46.128.25:8082
+    description: VPS сервер (через CORS прокси)
+
+tags:
+  - name: Auth
+    description: Аутентификация и регистрация
+  - name: Users
+    description: Управление пользователями
+  - name: Notes
+    description: Операции с заметками
+
+paths:
+  # ==================== АУТЕНТИФИКАЦИЯ ====================
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Регистрация нового пользователя
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  minLength: 6
+                  example: password123
+      responses:
+        '200':
+          description: Успешная регистрация
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: 123e4567-e89b-12d3-a456-426614174000
+                  email:
+                    type: string
+                    example: user@example.com
+        '400':
+          description: Ошибка валидации
+        '409':
+          description: Пользователь уже существует
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Аутентификация пользователя
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: test2@gmail.com
+                password:
+                  type: string
+                  example: 123456789
+      responses:
+        '200':
+          description: Успешная аутентификация
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT токен для авторизации
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  userId:
+                    type: string
+                    example: 12743fac-f9e7-4291-8f1d-3353ad9117e2
+        '401':
+          description: Неверные учетные данные
+
+  # ==================== ПОЛЬЗОВАТЕЛИ ====================
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Получить информацию о текущем пользователе
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Информация о пользователе
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  email:
+                    type: string
+                  createdAt:
+                    type: integer
+                    format: int64
+        '401':
+          description: Не авторизован
+
+  # ==================== ЗАМЕТКИ ====================
+  /notes:
+    get:
+      tags:
+        - Notes
+      summary: Получить список всех заметок пользователя
+      operationId: getAllNotes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: parentId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: ID родительской заметки (для получения дочерних)
+      responses:
+        '200':
+          description: Список заметок
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Note'
+        '401':
+          description: Не авторизован
+
+    post:
+      tags:
+        - Notes
+      summary: Создать новую заметку
+      operationId: createNote
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - type
+              properties:
+                title:
+                  type: string
+                  example: Моя первая заметка
+                type:
+                  type: string
+                  enum:
+                    - note
+                    - task
+                  example: task
+                parentId:
+                  type: string
+                  nullable: true
+                  description: ID родительской заметки (опционально)
+                  example: null
+      responses:
+        '200':
+          description: Заметка создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+        '400':
+          description: Ошибка валидации
+        '401':
+          description: Не авторизован
+
+  /notes/{id}:
+    get:
+      tags:
+        - Notes
+      summary: Получить заметку по ID
+      operationId: getNoteById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: UUID заметки
+      responses:
+        '200':
+          description: Данные заметки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+        '404':
+          description: Заметка не найдена
+
+    put:
+      tags:
+        - Notes
+      summary: Обновить заголовок заметки
+      operationId: updateNoteTitle
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                  example: Обновленный заголовок
+      responses:
+        '200':
+          description: Заголовок обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+        '404':
+          description: Заметка не найдена
+
+    delete:
+      tags:
+        - Notes
+      summary: Удалить заметку
+      operationId: deleteNote
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Заметка удалена
+        '404':
+          description: Заметка не найдена
+
+  /notes/{id}/content:
+    get:
+      tags:
+        - Notes
+      summary: Получить содержимое заметки (Markdown)
+      operationId: getNoteContent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Markdown содержимое
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "# Заголовок\n\nТекст заметки..."
+        '404':
+          description: Заметка или файл не найдены
+
+    put:
+      tags:
+        - Notes
+      summary: Обновить содержимое заметки
+      operationId: updateNoteContent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+              example: "# Обновленный заголовок\n\nОбновленное содержимое..."
+      responses:
+        '200':
+          description: Содержимое обновлено
+        '404':
+          description: Заметка не найдена
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Введите токен в формате "Bearer <token>"
+
+  schemas:
+    Note:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Уникальный идентификатор заметки
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        user_id:
+          type: string
+          description: ID владельца заметки
+        title:
+          type: string
+          description: Заголовок заметки
+          example: Моя заметка
+        type:
+          type: string
+          enum: [note, task]
+          description: Тип заметки
+        file_path:
+          type: string
+          description: Путь к файлу с содержимым
+        created_at:
+          type: integer
+          format: int64
+          description: Время создания (Unix timestamp в миллисекундах)
+        updated_at:
+          type: integer
+          format: int64
+          description: Время последнего обновления
+        parent_ids:
+          type: string
+          description: JSON-массив ID родительских заметок
+          example: "[]"
