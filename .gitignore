@@ -33,4 +33,10 @@ out/
 /.nb-gradle/
 
 ### VS Code ###
+<<<<<<< HEAD
 .vscode/postgres_data/
+=======
+.vscode/
+
+postgres_data/
+>>>>>>> 75853ba285ad0c176a96a05ae476f96bdb77c368
