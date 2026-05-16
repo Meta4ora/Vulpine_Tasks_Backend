@@ -6,7 +6,8 @@ import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -28,7 +29,6 @@ class UserFlowTest {
 
     @Test
     fun `full user flow - register, login, create note, get notes, delete note`() = testApplication {
-        // Включаем модуль приложения
         application { module() }
 
         val testEmail = "e2e-${System.currentTimeMillis()}@test.com"
@@ -40,6 +40,7 @@ class UserFlowTest {
             setBody(Json.encodeToString(AuthRequest(testEmail, testPassword)))
         }
         assertEquals(HttpStatusCode.OK, registerResponse.status)
+        println("✅ Регистрация успешна")
 
         // 2. Логин
         val loginResponse = client.post("/auth/login") {
@@ -48,9 +49,15 @@ class UserFlowTest {
         }
         assertEquals(HttpStatusCode.OK, loginResponse.status)
 
-        val authResponse = Json.decodeFromString<AuthResponse>(loginResponse.bodyAsText())
+        // Парсим ответ с токеном (учтите, что поле может называться не token)
+        val loginBody = loginResponse.bodyAsText()
+        println("📦 Ответ логина: $loginBody")
+
+        val json = Json { ignoreUnknownKeys = true }
+        val authResponse = json.decodeFromString<AuthResponse>(loginBody)
         val token = authResponse.token
         assertNotNull(token)
+        println("✅ Получен токен: ${token.take(50)}...")
 
         // 3. Создание заметки
         val createResponse = client.post("/notes") {
@@ -60,9 +67,13 @@ class UserFlowTest {
         }
         assertEquals(HttpStatusCode.OK, createResponse.status)
 
-        val newNote = Json.decodeFromString<NoteResponse>(createResponse.bodyAsText())
+        val createBody = createResponse.bodyAsText()
+        println("📦 Ответ создания заметки: $createBody")
+
+        val newNote = json.decodeFromString<NoteResponse>(createBody)
         assertTrue(newNote.id.isNotBlank())
         assertEquals("E2E Test Note", newNote.title)
+        println("✅ Создана заметка с ID: ${newNote.id}")
 
         // 4. Получение списка заметок
         val getResponse = client.get("/notes") {
@@ -70,20 +81,28 @@ class UserFlowTest {
         }
         assertEquals(HttpStatusCode.OK, getResponse.status)
 
-        val notes = Json.decodeFromString<List<NoteResponse>>(getResponse.bodyAsText())
+        val getBody = getResponse.bodyAsText()
+        println("📦 Список заметок: ${getBody.take(100)}...")
+
+        val notes = json.decodeFromString<List<NoteResponse>>(getBody)
         assertTrue(notes.any { it.id == newNote.id })
+        println("✅ Заметка найдена в списке")
 
         // 5. Удаление заметки
         val deleteResponse = client.delete("/notes/${newNote.id}") {
             header(HttpHeaders.Authorization, "Bearer $token")
         }
         assertEquals(HttpStatusCode.OK, deleteResponse.status)
+        println("✅ Заметка удалена")
 
         // 6. Проверка, что заметка удалена
         val getAfterDeleteResponse = client.get("/notes") {
             header(HttpHeaders.Authorization, "Bearer $token")
         }
-        val notesAfterDelete = Json.decodeFromString<List<NoteResponse>>(getAfterDeleteResponse.bodyAsText())
+        val notesAfterDelete = json.decodeFromString<List<NoteResponse>>(getAfterDeleteResponse.bodyAsText())
         assertTrue(notesAfterDelete.none { it.id == newNote.id })
+        println("Проверка удаления пройдена")
+
+        println("ВСЕ ТЕСТЫ ПРОЙДЕНЫ УСПЕШНО!")
     }
 }
