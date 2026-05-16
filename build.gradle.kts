@@ -41,5 +41,9 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
     implementation("org.jetbrains.exposed:exposed-json:0.48.0")
+
+    testImplementation("io.ktor:ktor-server-test-host:2.3.12")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.9.0")
 }
 
